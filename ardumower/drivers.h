@@ -130,6 +130,8 @@ template <class T> int eereadwrite(boolean readflag, int &ee, T& value)
     return i;
 }
 
+int eereadwriteString(boolean readflag, int &ee, String& value);
+
 
 // ---------- driver functions ----------------------------------
 

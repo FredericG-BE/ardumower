@@ -45,6 +45,7 @@
 #include "perimeter.h"
 #include "gps.h"
 #include "pfod.h"
+#include "esp8266.h"
 
 //#include "QueueList.h"
 //#include <limits.h>
@@ -421,6 +422,11 @@ class Robot
     unsigned long nextTimeButton ;
     unsigned long nextTimeErrorCounterReset;    
     unsigned long nextTimeErrorBeep ;  
+
+    // --------- other ----------------------------------
+    Esp8266 esp8266;
+    String esp8266ConnectionString;
+
     // ---------------------------------------
     Robot();
     // robot setup
