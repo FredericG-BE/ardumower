@@ -26,7 +26,7 @@
 #include "robot.h"
 
 //#define MAGIC 45
-#define MAGIC 45
+#define MAGIC 46
 
 
 #define ADDR_USER_SETTINGS 0
@@ -43,7 +43,7 @@ char* consoleModeNames[]={"sen_counters", "sen_values", "perimeter"};
 Robot::Robot(){
   name = "Generic";
   developerActive = false;
-  rc.setRobot(this);
+  rc.setRobot(this, &esp8266);
   
   stateLast = stateCurr = stateNext = STATE_OFF; 
   stateTime = 0;
@@ -157,6 +157,8 @@ Robot::Robot(){
   nextTimeErrorBeep = 0;
   nextTimeMotorControl = 0;  
   nextTimeMotorMowControl = 0;
+
+  esp8266ConnectionString="*NotSet*";
 }
 
   
@@ -281,7 +283,8 @@ void Robot::loadSaveUserSettings(boolean readflag){
   eereadwrite(readflag, addr, timer);  
   eereadwrite(readflag, addr, rainUse);
   eereadwrite(readflag, addr, gpsUse);
-  eereadwrite(readflag, addr, dropUse);          
+  eereadwrite(readflag, addr, dropUse);
+  eereadwriteString(readflag, addr, esp8266ConnectionString);
   Console.print(F("loadSaveUserSettings addrstop="));
   Console.println(addr);
 }
@@ -516,6 +519,10 @@ void Robot::printSettingSerial(){
   Console.print  (F("timerUse : "));
   Console.println(timerUse); 
   
+// ----- ESP8266 ---------------------------------------
+  Console.print  (F("ESP8266 Connection String : "));
+  Console.println(esp8266ConnectionString);
+
   return;
 
 }
@@ -1054,6 +1061,9 @@ void Robot::setup()  {
   #ifdef USE_DEVELOPER_TEST
     Console.println("Warning: USE_DEVELOPER_TEST activated");
   #endif
+
+  esp8266.initialise(esp8266ConnectionString);
+
   Console.print(F("Config: "));
   Console.println(name);  
   Console.println(F("press..."));
@@ -1162,7 +1172,9 @@ void Robot::printMenu(){
   Console.println(F("9=save user settings"));  
   Console.println(F("l=load factory settings"));  
   Console.println(F("x=read settings"));  
-  Console.println(F("e=delete all errors"));  
+  Console.println(F("e=delete all errors"));
+  Console.println(F("a=configure ESP8266"));
+  Console.println(F("b=Check AP connection"));
   Console.println(F("0=exit"));  
   Console.println();
 }
@@ -1306,11 +1318,34 @@ void Robot::menu(){
           printMenu();
           break;          
         case 'e':
-        resetErrorCounters();
-        setNextState(STATE_OFF, 0);
-        Console.println(F("ALL ERRORS ARE DELETED"));
-        printMenu();
-        break;          
+          resetErrorCounters();
+          setNextState(STATE_OFF, 0);
+          Console.println(F("ALL ERRORS ARE DELETED"));
+          printMenu();
+          break;
+        case 'a':
+          Console.print(F("Enter Connection String: "));
+          esp8266ConnectionString = "";
+          while (Console.available()) Console.read();
+          while (1) {
+            if (Console.available()) {
+              char ch=Console.read();
+              if (ch=='\n' || ch=='\r')
+                break;
+              else {
+                esp8266ConnectionString += ch;
+              }
+            }
+          }
+          Console.println();
+          Console.println(esp8266ConnectionString);
+
+          printMenu();
+          break;
+        case 'b':
+          esp8266.checkAccessPointConnection();
+          printMenu();
+          break;
       }      
     }
     delay(10);
@@ -2212,6 +2247,7 @@ void Robot::loop()  {
   
   readSerial();   
   if (rc.readSerial()) resetIdleTime();
+
   readSensors(); 
   checkBattery(); 
 

@@ -40,6 +40,7 @@
 #include <Arduino.h>
 #include "drivers.h"
 #include "pid.h"
+#include "esp8266.h"
 
 // pfodApp state
 enum { PFOD_OFF, PFOD_MENU, PFOD_LOG_SENSORS, 
@@ -53,7 +54,7 @@ class RemoteControl
 {
   public:
     RemoteControl();
-    void setRobot(Robot *aRobot);
+    void setRobot(Robot *aRobot, Esp8266* aComms);
     void initSerial(int baudrate);
     bool readSerial();
     void run();    
@@ -67,6 +68,8 @@ class RemoteControl
     int8_t perimeterCapture[32]; 
     int perimeterCaptureIdx;        
     float stringToFloat(String &s);   
+
+    Esp8266 *comms;
 
     // generic
     void sendYesNo(int value);
