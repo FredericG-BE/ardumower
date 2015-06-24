@@ -32,12 +32,13 @@
 // When ECHOTEST is enabled, each received {xxx} will be echoed as [xxx]
 // #define ECHOTEST
  
-#define BAUDRATE 115200
+#define BAUDRATE 19200
 
 #define MAX_CONFIG_LEN  100
 #define MSG_HEADER "[WSB]"
 #define VESRION "v0.9"
 #define CONFIG_MSG_START "config:"
+#define WELCOME_MSG MSG_HEADER " ESP8266 Serial WIFI Bridge " VESRION
 
 typedef struct {
   const char* name;
@@ -82,6 +83,11 @@ const ledSequence_t ledSeq_clientConnected  = {10,1};
 WiFiServer server(8080);
 WiFiClient client;
 bool clientConnected = false;
+
+WiFiServer monitorServer(23);
+WiFiClient monitorClient;
+bool monitorConnected = false;
+
 Ticker ledTicker;
 
 
@@ -230,6 +236,30 @@ void echotestProcess(char ch) {
 }
 #endif
 
+#define DIR_UNDEF  0
+#define DIR_W2S    1
+#define DIR_S2W    2
+
+void monitorHeader(uint8_t dir) {
+  static uint8_t curr_dir = DIR_UNDEF;
+  if (curr_dir != dir) {
+    curr_dir = dir; 
+    if (dir == DIR_W2S)
+      monitorClient.print("\nW > S : ");
+    else
+      monitorClient.print("\nW < S : ");
+  }
+}
+
+void doMonitor(char ch, uint8_t dir) {
+  monitorHeader(dir);
+  monitorClient.print(ch);
+}
+
+void doMonitor(const uint8_t* buf, size_t buflen, uint8_t dir) {
+  monitorHeader(dir);
+  monitorClient.write(buf, buflen);
+}
 
 void setup() {
   // Configure Serial Port
@@ -238,12 +268,12 @@ void setup() {
   // Configure LED
   pinMode(2, OUTPUT);
   setLedSequence(ledSeq_startup);
-  ledTicker.attach(0.1, onLedTicker); 
+  //ledTicker.attach(0.1, onLedTicker); 
    
   // Welcome message
   delay(500);
   Serial.println("\n\n");
-  Serial.println(MSG_HEADER " ESP8266 Serial WIFI Bridge " VESRION);
+  Serial.println(WELCOME_MSG);
   
   // Get configuration message
   setLedSequence(ledSeq_waitForConfig);
@@ -283,9 +313,17 @@ void setup() {
   // Start server
   server.begin();
   server.setNoDelay(true);
+  monitorServer.begin();
+  monitorServer.setNoDelay(true);
 }
 
+uint8_t inbuf[100];
+size_t bufLen = 0;
+
 void loop() {
+  setLed(false);
+  
+  // Handle Client connection
   if (clientConnected) {
     if (!client.connected())  {
       // Client is disconnected
@@ -295,7 +333,6 @@ void loop() {
       Serial.println(MSG_HEADER " Client Disconnected");
     }
   }
-  
   if (server.hasClient()) {
     // A new client tries to connect
     if (!clientConnected) {
@@ -310,28 +347,83 @@ void loop() {
       serverClient.stop();
     }
   }
+  
+  // Handle Monitor connection
+  if (monitorConnected) {
+    if (!monitorClient.connected())  {
+      // monitor is disconnected
+      monitorClient.stop();
+      monitorConnected = false;
+      Serial.println(MSG_HEADER " Monitor Disconnected");
+    }
+  }
+  if (monitorServer.hasClient()) {
+    // monitor tries to connect
+    if (monitorConnected) {
+      monitorClient.stop();
+    }
+    // OK accept the monitor
+    monitorClient = monitorServer.available();
+    monitorConnected = true;
+    Serial.println(MSG_HEADER " Monitor Connected");
+    monitorClient.println(WELCOME_MSG);
+    
+  }
+  
  
   // Send all bytes received form the client to the Serial Port
   if (clientConnected){
     if(client.available()){
-      while(client.available()) {
-        char ch = client.read();
-        Serial.write(ch);
-        #ifdef ECHOTEST
-          echotestProcess(ch);
-        #endif 
-      }
+      char buf[200];
+      size_t bytesAvailable = min(client.available(), sizeof(buf));
+      for (size_t i=0; i<bytesAvailable; i++) {
+        buf[i] = client.read();
+      }  
+      yield();
+      Serial.write(buf, bytesAvailable);
+      yield();
+      if (monitorConnected) doMonitor((uint8_t*)buf, bytesAvailable, DIR_W2S);
+    }
+  }  
+  
+  
+  // What is received on the Serial Port is sent to the client
+//  if (Serial.available()>0){
+//    setLed(true);
+//    size_t len = Serial.available();//min(Serial.available(), 50);
+//    Serial.print("I");
+//    Serial.print(len);
+//    uint8_t sbuf[len];
+//    Serial.readBytes(sbuf, len);
+//    if (clientConnected){
+//      client.print(len);
+//      client.print(" ");
+//      //client.write(sbuf, len);
+//      //if (monitorConnected) doMonitor(sbuf, len, DIR_S2W);
+//      yield();
+//    }
+//    setLed(false);
+//  }
+
+  if (Serial.available()>0){
+    
+    size_t len = Serial.available();//min(Serial.available(), 50);
+    Serial.readBytes(inbuf+bufLen, len);
+    bufLen += len;
+    
+    if (inbuf[bufLen] == '}') {
+        setLed(true);
+        if (clientConnected){
+        //  client.print(len);
+        //  client.print(" ");
+        uint8_t sbuf[6];
+           //client.write(sbuf, len);
+           bufLen = 0;
+          //if (monitorConnected) doMonitor(sbuf, len, DIR_S2W);
+          yield();
+        }
+        setLed(false);
     }
   }
   
-  // What is received on the Serial Port is sent to the client
-  if(Serial.available()){
-    size_t len = Serial.available();
-    uint8_t sbuf[len];
-    Serial.readBytes(sbuf, len);
-    if (clientConnected){
-      client.write(sbuf, len);
-      delay(1);
-    }
-  }
 }
