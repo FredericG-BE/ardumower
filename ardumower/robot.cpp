@@ -1218,37 +1218,30 @@ void Robot::testMotors(){
   motorLeftPWMCurr = 0; motorRightPWMCurr = 0;
   setMotorPWM(motorLeftPWMCurr, motorRightPWMCurr, false);
 
-  Console.println(F("testing left motor (forward) half speed..."));
-  delay(1000);  
-  motorLeftPWMCurr = motorSpeedMaxPwm/2; motorRightPWMCurr = 0;
-  setMotorPWM(motorLeftPWMCurr, motorRightPWMCurr, false);
-  delayInfo(5000);
-  motorLeftPWMCurr = 0; motorRightPWMCurr = 0;
-  setMotorPWM(motorLeftPWMCurr, motorRightPWMCurr, false);
+  int pwm;
+  for (int side=0; side<2; side++) {
+    for (int speed=0; speed<3; speed++) {
+      switch (speed) {
+      case 0: pwm = +motorSpeedMaxPwm; break;
+      case 1: pwm = -motorSpeedMaxPwm; break;
+      case 2: pwm = 0; break;
+      }
+      motorLeftPWMCurr = 0;
+      motorRightPWMCurr = 0;
+      if (side) {
+        motorLeftPWMCurr = pwm;
+      } else {
+        motorRightPWMCurr = pwm;
+      }
+      Console.print(" Testing, Left=");
+      Console.print(motorLeftPWMCurr);
+      Console.print("  Right=");
+      Console.println(motorRightPWMCurr);
+      setMotorPWM(motorLeftPWMCurr, motorRightPWMCurr, false);
+      delay(10000);
+    }
+  }
 
-  Console.println(F("testing left motor (reverse) full speed..."));
-  delay(1000); 
-  motorLeftPWMCurr = -motorSpeedMaxPwm; motorRightPWMCurr = 0; 
-  setMotorPWM(motorLeftPWMCurr, motorRightPWMCurr, false);
-  delayInfo(5000);  
-  motorLeftPWMCurr = 0; motorRightPWMCurr = 0;
-  setMotorPWM(motorLeftPWMCurr, motorRightPWMCurr, false);
-
-  Console.println(F("testing right motor (forward) half speed..."));
-  delay(1000);  
-  motorLeftPWMCurr = 0; motorRightPWMCurr= motorSpeedMaxPwm/2; 
-  setMotorPWM(motorLeftPWMCurr, motorRightPWMCurr, false);
-  delayInfo(5000);
-  motorLeftPWMCurr = 0; motorRightPWMCurr = 0;
-  setMotorPWM(motorLeftPWMCurr, motorRightPWMCurr, false);
-
-  Console.println(F("testing right motor (reverse) full speed..."));
-  delay(1000);    
-  motorLeftPWMCurr = 0; motorRightPWMCurr = -motorSpeedMaxPwm;      
-  setMotorPWM(motorLeftPWMCurr, motorRightPWMCurr, false);
-  delayInfo(5000);
-  motorLeftPWMCurr = 0; motorRightPWMCurr = 0;
-  setMotorPWM(motorLeftPWMCurr, motorRightPWMCurr, false);    
 }
 
 void Robot::menu(){  

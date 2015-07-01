@@ -222,6 +222,15 @@ void setMC33926(int pinDir, int pinPWM, int speed){
   }
 }
 
+
+void setEsc(Servo &esc, int speed) {
+  // Speed is between -255 and 255.
+  // Mapped to 0 and 180
+  //Console.print("ESC:");
+  //Console.println(speed);
+  esc.write(speed*90/255+90);
+}
+
 // ---- sensor drivers --------------------------------------------------------------
 
 // HC-SR04 ultrasonic sensor driver
