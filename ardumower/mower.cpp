@@ -44,16 +44,9 @@
 #include "due.h"
 
 // ------ pins---------------------------------------
-#define pinMotorEnable  37         // EN motors enable
-#define pinMotorLeftPWM 5          // M1_IN1 left motor PWM pin
-#define pinMotorLeftDir 31         // M1_IN2 left motor Dir pin
-#define pinMotorLeftSense A1       // M1_FB  left motor current sense
-#define pinMotorLeftFault 25       // M1_SF  left motor fault
-                                                             
-#define pinMotorRightPWM  3        // M2_IN1 right motor PWM pin
-#define pinMotorRightDir 33        // M2_IN2 right motor Dir pin
-#define pinMotorRightSense A0      // M2_FB  right motor current sense
-#define pinMotorRightFault 27      // M2_SF  right motor fault
+
+#define pinEscLeft    5             // PWM output Electronic Speed Controller for left Brushless Motor
+#define pinEscRight   3             // PWM output Electronic Speed Controller for right Brushless Motor
                                     
 #define pinMotorMowPWM 2           // M1_IN1 mower motor PWM pin (if using MOSFET, use this pin)
 #define pinMotorMowDir 29          // M1_IN2 mower motor Dir pin (if using MOSFET, keep unconnected)
@@ -317,18 +310,10 @@ void Mower::setup(){
   setActuator(ACT_CHGRELAY, 0);
   
   // left wheel motor
-  pinMode(pinMotorEnable, OUTPUT);  
-  digitalWrite(pinMotorEnable, HIGH);
-  pinMode(pinMotorLeftPWM, OUTPUT);
-  pinMode(pinMotorLeftDir, OUTPUT);   
-  pinMode(pinMotorLeftSense, INPUT);     
-  pinMode(pinMotorLeftFault, INPUT);    
+  escLeft.attach(pinEscLeft, 1000, 2000);
   
   // right wheel motor
-  pinMode(pinMotorRightPWM, OUTPUT);
-  pinMode(pinMotorRightDir, OUTPUT); 
-  pinMode(pinMotorRightSense, INPUT);       
-  pinMode(pinMotorRightFault, INPUT);  
+  escRight.attach(pinEscRight, 1000, 2000);
   
   // mower motor
   pinMode(pinMotorMowDir, OUTPUT); 
@@ -448,9 +433,6 @@ void Mower::setup(){
   // ADC
   ADCMan.init();
   ADCMan.setCapture(pinChargeCurrent, 1, true);//Aktivierung des LaddeStrom Pins beim ADC-Managers      
-  ADCMan.setCapture(pinMotorMowSense, 1, true);
-  ADCMan.setCapture(pinMotorLeftSense, 1, true);
-  ADCMan.setCapture(pinMotorRightSense, 1, true);
   ADCMan.setCapture(pinBatteryVoltage, 1, false);
   ADCMan.setCapture(pinChargeVoltage, 1, false);  
   ADCMan.setCapture(pinVoltageMeasurement, 1, false);    
@@ -465,45 +447,11 @@ void Mower::setup(){
 }
 
 void checkMotorFault(){
-  if (digitalRead(pinMotorLeftFault)==LOW){
-    robot.addErrorCounter(ERR_MOTOR_LEFT);
-    Console.println(F("Error: motor left fault"));
-    robot.setNextState(STATE_ERROR, 0);
-    //digitalWrite(pinMotorEnable, LOW);
-    //digitalWrite(pinMotorEnable, HIGH);
-  }
-  if  (digitalRead(pinMotorRightFault)==LOW){
-    robot.addErrorCounter(ERR_MOTOR_RIGHT);
-    Console.println(F("Error: motor right fault"));
-    robot.setNextState(STATE_ERROR, 0);
-    //digitalWrite(pinMotorEnable, LOW);
-    //digitalWrite(pinMotorEnable, HIGH);
-  }
-  if (digitalRead(pinMotorMowFault)==LOW){  
-    robot.addErrorCounter(ERR_MOTOR_MOW);
-    Console.println(F("Error: motor mow fault"));
-    robot.setNextState(STATE_ERROR, 0);
-    //digitalWrite(pinMotorMowEnable, LOW);
-    //digitalWrite(pinMotorMowEnable, HIGH);
-  }
+  // Nothing to check with brushless motors
 }
 
 void Mower::resetMotorFault(){
-  if (digitalRead(pinMotorLeftFault)==LOW){
-    digitalWrite(pinMotorEnable, LOW);
-    digitalWrite(pinMotorEnable, HIGH);
-    Console.println(F("Reset motor left fault"));
-}
-  if  (digitalRead(pinMotorRightFault)==LOW){
-    digitalWrite(pinMotorEnable, LOW);
-    digitalWrite(pinMotorEnable, HIGH);
-    Console.println(F("Reset motor right fault"));
-}
-  if (digitalRead(pinMotorMowFault)==LOW){  
-    digitalWrite(pinMotorMowEnable, LOW);
-    digitalWrite(pinMotorMowEnable, HIGH);
-    Console.println(F("Reset motor mow fault"));
-}
+  // Nothing to check with brushless motors
 }
 
  
@@ -511,8 +459,8 @@ int Mower::readSensor(char type){
   switch (type) {
 // motors------------------------------------------------------------------------------------------------
     case SEN_MOTOR_MOW: return ADCMan.read(pinMotorMowSense); break;
-    case SEN_MOTOR_RIGHT: checkMotorFault(); return ADCMan.read(pinMotorRightSense); break;
-    case SEN_MOTOR_LEFT:  checkMotorFault(); return ADCMan.read(pinMotorLeftSense); break;
+    case SEN_MOTOR_RIGHT: return 0; // Brushless
+    case SEN_MOTOR_LEFT:  return 0; // Brushless
     //case SEN_MOTOR_MOW_RPM: break; // not used - rpm is upated via interrupt
 
 // perimeter----------------------------------------------------------------------------------------------
@@ -564,8 +512,8 @@ int Mower::readSensor(char type){
 void Mower::setActuator(char type, int value){
   switch (type){
     case ACT_MOTOR_MOW: setMC33926(pinMotorMowDir, pinMotorMowPWM, value); break;// Motortreiber einstellung - bei Bedarf ändern z.B setL298N auf setMC33926
-    case ACT_MOTOR_LEFT: setMC33926(pinMotorLeftDir, pinMotorLeftPWM, value); break;//                                                                  Motortreiber einstellung - bei Bedarf ändern z.B setL298N auf setMC33926
-    case ACT_MOTOR_RIGHT: setMC33926(pinMotorRightDir, pinMotorRightPWM, value); break; //                                                              Motortreiber einstellung - bei Bedarf ändern z.B setL298N auf setMC33926
+    case ACT_MOTOR_LEFT: setEsc(escLeft, value); break;    // Brushless
+    case ACT_MOTOR_RIGHT: setEsc(escRight, value); break;   // Brushless
     case ACT_BUZZER: if (value == 0) noTone(pinBuzzer); else tone(pinBuzzer, value); break;
     case ACT_LED: digitalWrite(pinLED, value); break;    
     case ACT_USER_SW1: digitalWrite(pinUserSwitch1, value); break;     

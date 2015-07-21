@@ -26,6 +26,8 @@
 #define MOWER_H
 
 #include <Arduino.h>
+#include <servo.h>
+
 #include "robot.h"
 
 #include "drivers.h"
@@ -44,6 +46,10 @@ class Mower : public Robot
     virtual int readSensor(char type);
     virtual void setActuator(char type, int value);
     virtual void configureBluetooth(boolean quick);
+
+  private:
+    Servo escLeft;
+    Servo escRight;
 };
 
 
