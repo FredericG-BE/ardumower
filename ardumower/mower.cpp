@@ -170,9 +170,9 @@ Mower::Mower(){
   // ------ rain ------------------------------------
   rainUse          = 0;      // use rain sensor?
   // ------ sonar ------------------------------------
-  sonarUse          = 1;      // use ultra sonic sensor? (WARNING: robot will slow down, if enabled but not connected!)
-  sonarLeftUse      = 1;
-  sonarRightUse     = 1;
+  sonarUse          = 0;      // use ultra sonic sensor? (WARNING: robot will slow down, if enabled but not connected!)
+  sonarLeftUse      = 0;
+  sonarRightUse     = 0;
   sonarCenterUse    = 0;
   sonarTriggerBelow = 1050;    // ultrasonic sensor trigger distance
   // ------ perimeter ---------------------------------
@@ -201,13 +201,13 @@ Mower::Mower(){
   imuRollPID.Ki     = 21;
   imuRollPID.Kd     = 0;  
   // ------ model R/C ------------------------------------
-  remoteUse         = 1;       // use model remote control (R/C)?
+  remoteUse         = 0;       // use model remote control (R/C)?
   // ------ battery -------------------------------------
   batMonitor = 1;              // monitor battery and charge voltage?
-  batGoHomeIfBelow = 23.7;     // drive home voltage (Volt)
-  batSwitchOffIfBelow = 21.7;  // switch off battery if below voltage (Volt)
+  batGoHomeIfBelow = 10;     // drive home voltage (Volt)
+  batSwitchOffIfBelow = 9.1;  // switch off battery if below voltage (Volt)
   batSwitchOffIfIdle = 1;      // switch off battery if idle (minutes)
-  batFactor       = 0.495;      // battery conversion factor  / 10 due to arduremote bug, can be removed after fixing (look in robot.cpp)
+  batFactor       = 0.208;      // battery conversion factor  / 10 due to arduremote bug, can be removed after fixing (look in robot.cpp)
   batChgFactor    = 0.495;      // battery conversion factor  / 10 due to arduremote bug, can be removed after fixing (look in robot.cpp)
   batFull          =29.4;      // battery reference Voltage (fully charged) PLEASE ADJUST IF USING A DIFFERENT BATTERY VOLTAGE! FOR a 12V SYSTEM TO 14.4V
   batChargingCurrentMax =1.6;  // maximum current your charger can devliver
@@ -229,7 +229,7 @@ Mower::Mower(){
   stationForwTime    = 1500;    // charge station forward time (ms)
   stationCheckTime   = 1700;    // charge station reverse check time (ms)
   // ------ odometry ------------------------------------
-  odometryUse       = 1;       // use odometry?
+  odometryUse       = 0;       // use odometry?
   twoWayOdometrySensorUse = 0; // use optional two-wire odometry sensor?
   odometryTicksPerRevolution = 1060;   // encoder ticks per one full resolution
   odometryTicksPerCm = 13.49;  // encoder ticks per cm
@@ -242,7 +242,7 @@ Mower::Mower(){
   gpsSpeedIgnoreTime = 5000; // how long gpsSpeed is ignored when robot switches into a new STATE (in ms)
 
   // ----- other -----------------------------------------
-  buttonUse         = 1;       // has digital ON/OFF button?
+  buttonUse         = 0;       // has digital ON/OFF button?
   // ----- user-defined switch ---------------------------
   userSwitch1       = 0;       // user-defined switch 1 (default value)
   userSwitch2       = 0;       // user-defined switch 2 (default value)
