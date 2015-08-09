@@ -749,12 +749,6 @@ void Robot::setMotorPWM(int pwmLeft, int pwmRight, boolean useAccel){
   lastSetMotorSpeedTime = millis();  
   if (TaC > 1000) TaC = 1;
 
-  if (stateCurr == STATE_PERI_TRACK) {
-  Bluetooth.print(pwmLeft);
-  Bluetooth.print(" ");
-  Bluetooth.println(pwmRight);
-  }
-
   if (useAccel){  
     // http://phrogz.net/js/framerate-independent-low-pass-filter.html 
     // smoothed += elapsedTime * ( newValue - smoothed ) / smoothing;          
@@ -872,51 +866,35 @@ void Robot::motorControlPerimeter(){
   if (millis() < nextTimeMotorPerimeterControl) return;
     nextTimeMotorPerimeterControl = millis() + 100;
 
-  pinMode(4, OUTPUT);
-  digitalWrite(4,LOW);
-
   if ((millis() > stateStartTime + 5000) && (millis() > perimeterLastTransitionTime + trackingPerimeterTransitionTimeOut)){
-    Bluetooth.print("S ");
-    Bluetooth.print(millis());
-    Bluetooth.print(" ");
-    Bluetooth.print(perimeterLastTransitionTime);
-    Bluetooth.print(" ");
-    Bluetooth.print(perimeterMag);
-    Bluetooth.print(" ");
     // robot is wheel-spinning while tracking => roll to get ground again
-    digitalWrite(4,HIGH);
     if (trackingBlockInnerWheelWhilePerimeterStruggling == 0){
-    if (perimeterMag < 0) setMotorPWM( -motorSpeedMaxPwm/3, motorSpeedMaxPwm/3, false);
-        else setMotorPWM( motorSpeedMaxPwm/3, -motorSpeedMaxPwm/3, false);}
+    if (perimeterInside) setMotorPWM( -motorSpeedMaxPwm/1.5, motorSpeedMaxPwm/1.5, false);
+        else setMotorPWM( motorSpeedMaxPwm/1.5, -motorSpeedMaxPwm/1.5, false);}
 
     else if (trackingBlockInnerWheelWhilePerimeterStruggling == 1){
-      if (perimeterMag < 0) setMotorPWM( 0, motorSpeedMaxPwm/3, false);
-        else setMotorPWM( motorSpeedMaxPwm/3, 0, false);
+      if (perimeterInside) setMotorPWM( 0, motorSpeedMaxPwm/1.5, false);
+        else setMotorPWM( motorSpeedMaxPwm/1.5, 0, false);
     }
 
-
-
-    if (millis() > perimeterLastTransitionTime + trackingErrorTimeOut){
-      Bluetooth.print("TRACK ERR");
+    if (millis() > perimeterLastTransitionTime + trackingErrorTimeOut){      
       Console.println("Error: tracking error");
       addErrorCounter(ERR_TRACKING);
       //setNextState(STATE_ERROR,0);
       setNextState(STATE_PERI_FIND,0);
     }
-    perimeterPID.reset();
     return;
   }   
-  Bluetooth.print("P  ");
-  if (perimeterMag < 0) perimeterPID.x = -1;
-    else if (perimeterMag > 0) perimeterPID.x = 1; 
-    else perimeterPID.x = 0;
+  if (perimeterInside)
+      perimeterPID.x = -1;
+    else
+      perimeterPID.x = 1;
+
   perimeterPID.w = 0;
   perimeterPID.y_min = -motorSpeedMaxPwm;
   perimeterPID.y_max = motorSpeedMaxPwm;		
   perimeterPID.max_output = motorSpeedMaxPwm;
   perimeterPID.compute();
-  Bluetooth.print(perimeterPID.y);
-  Bluetooth.print(" ");
   //setMotorPWM( motorLeftPWMCurr  +perimeterPID.y, 
   //               motorRightPWMCurr -perimeterPID.y, false);      
   setMotorPWM( max(-motorSpeedMaxPwm, min(motorSpeedMaxPwm, motorSpeedMaxPwm/2 - perimeterPID.y)), 
@@ -1737,10 +1715,8 @@ void Robot::readSensors(){
       perimeterCounter++;
       perimeterLastTransitionTime = millis();
       perimeterInside = perimeter.isInside(0);
-      Bluetooth.print("PerChange ");
-      Bluetooth.println(perimeterLastTransitionTime);
     }    
-    if (perimeterMag < 0) setActuator(ACT_LED, HIGH);    
+    if (perimeterInside < 0) setActuator(ACT_LED, HIGH);
       else setActuator(ACT_LED, LOW);      
     if ((!perimeterInside) && (perimeterTriggerTime == 0)){
       // set perimeter trigger time      
@@ -2424,7 +2400,7 @@ void Robot::checkPerimeterBoundary(){
 // check perimeter while finding it
 void Robot::checkPerimeterFind(){
   if (stateCurr == STATE_PERI_FIND){
-    if (perimeter.isInside(0)) {
+    if (perimeterInside) {
       // inside
       if (motorLeftSpeedRpmSet != motorRightSpeedRpmSet){      
         // we just made an 'outside=>inside' rotation, now track
